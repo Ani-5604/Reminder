@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reminder App</title>
+    <style>
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            background-color: #ffffff;
+        }
+        .container {
+            max-width: 500px;
+            margin: auto;
+            background-color: aqua;
+            padding: 1px 20px 20px 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        label, input, button {
+            margin: 10px 0;
+            box-sizing: border-box;
+        }
+        input {
+            width: 100%;
+            margin-top: 5px;
+        }
+        table {
+            width: 100%;
+            border: 2px;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 5px;
+            border: 1px solid #ffffff;
+            text-align: center;
+        }
+        th {
+            background-color: #4caf50;
+            color: #ffffff;
+        }
+        button {
+            background-color: #4caf50;
+            color: #ffffff;
+            padding: 5px;
+            border: none;
+        }
+        button:hover {
+            background-color: #a4dba6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 style="text-align: center">Reminder App</h2>
+        <label for="title">Title</label>
+        <input type="text" id="title">
+        <label for="description">Description</label>
+        <input type="text" id="description">
+        <label for="date">Date</label>
+        <input type="date" id="date">
+        <label for="time">Time</label>
+        <input type="time" id="time">
+        <button style="width: 100%" onclick="scheduleReminder();">Schedule Reminder</button>
+        <table>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Description</th>
+                    <th>Date & Time</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="reminderTablebody"></tbody>
+        </table>
+    </div>
+    <audio src="notification.mp3" id="notificationSound"></audio>
+
+    <script>
+        var timeoutIds = [];
+
+        function scheduleReminder() {
+            console.log('Checking notification permission...');
+            if (Notification.permission === "default") {
+                console.log('Requesting notification permission...');
+                Notification.requestPermission().then(function(permission) {
+                    console.log('Notification permission:', permission);
+                    if (permission !== "granted") {
+                        alert("Please allow notification access!");
+                        return;
+                    }
+                    createReminder();
+                });
+            } else if (Notification.permission === "granted") {
+                console.log('Notification permission granted');
+                createReminder();
+            } else {
+                alert("Notification access denied!");
+            }
+        }
+
+        function createReminder() {
+            var title = document.getElementById("title").value;
+            var description = document.getElementById("description").value;
+            var date = document.getElementById("date").value;
+            var time = document.getElementById("time").value;
+
+            if (!date || !time) {
+                alert("Please enter both date and time.");
+                return;
+            }
+
+            var dateTimeString = date + "T" + time + ":00"; // Properly format the datetime string
+            var scheduledTime = new Date(dateTimeString);
+            var currentTime = new Date();
+
+            console.log('Scheduled time:', scheduledTime);
+            console.log('Current time:', currentTime);
+
+            if (scheduledTime > currentTime) {
+                console.log(`Reminder set for ${scheduledTime}`);
+                addReminder(title, description, scheduledTime.toLocaleString());
+                var timeoutId = setTimeout(function() {
+                    console.log('Triggering Notification');
+                    document.getElementById("notificationSound").play();
+                    var notification = new Notification(title, {
+                        body: description,
+                        requireInteraction: true,
+                    });
+                }, scheduledTime - currentTime);
+                timeoutIds.push(timeoutId);
+            } else {
+                alert("The scheduled time is in the past.");
+            }
+        }
+
+        function addReminder(title, description, dateTimeString) {
+            var tableBody = document.getElementById("reminderTablebody");
+            var row = tableBody.insertRow();
+            var titleCell = row.insertCell(0);
+            var descriptionCell = row.insertCell(1);
+            var dateTimeCell = row.insertCell(2);
+            var actionCell = row.insertCell(3);
+
+            titleCell.innerHTML = title;
+            descriptionCell.innerHTML = description;
+            dateTimeCell.innerHTML = dateTimeString;
+            actionCell.innerHTML = "<button onclick='deleteReminder(this);'>Delete</button>";
+        }
+
+        function deleteReminder(button) {
+            var row = button.closest("tr");
+            var index = row.rowIndex;
+            clearTimeout(timeoutIds[index - 1]);
+            timeoutIds.splice(index - 1, 1);
+            row.remove();
+        }
+    </script>
+</body>
+</html>
